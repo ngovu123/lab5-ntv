@@ -1,41 +1,62 @@
-import React, { useEffect } from "react";
-import {firebase}  from "./config";
-import { NavigationContainer } from "@react-navigation/native";
-import { MyContextControllerProvider } from "./Src/context";
-import Router from "./Src/screens/Router"
-const initial = ()=> {
-  const USERS = firebase.firestore().collection("USERS")
-  const admin = {
-    name: "admin",
-    phone: "0909090909",
-    address: "Binh Duong",
-    email: "kiet2708@tdmu.edu.vn",
-    password: "123456",
-    role: "admin"
-  }
-  
-  USERS.doc(admin.email)
-  .onSnapshot(u=> {
-    if(!u.exists){
-      firebase.auth().createUserWithEmailAndPassword(admin.email, admin.password)
-      .then(()=>
-        USERS.doc(admin.email).set(admin)
-        .then(()=>console.log("Add new admin"))
-      )
-    }
-  })
-}
+import React, { useEffect } from 'react';
+import { createStackNavigator } from '@react-navigation/stack';
+import { NavigationContainer } from '@react-navigation/native';
+import { firebase } from './firebaseConfig'; // Import Firebase configuration
+import SignUp from './Auth/SignUp';
+import Login from './Auth/Login';
+import Home from './Home/Home';
+import Router from './Router';
+import AddService from './Home/AddService';
+import Logout from './Home/Logout';
+import Service from './Home/Service';
+import { UserProvider } from './context/UseContext';
+
+const Stack = createStackNavigator();
 
 const App = () => {
-  useEffect(()=>{
-    initial()
-  },[])
-  return (
-    <MyContextControllerProvider>
-      <NavigationContainer>
-        <Router />
-      </NavigationContainer>
-    </MyContextControllerProvider>
-  )}
+  // Function to create admin user if not exists
+  const createAdminUser = async () => {
+    const adminEmail = 'ngotruongvu@gmail.com'; 
+    const adminRef = firebase.firestore().collection('users').doc(adminEmail);
 
-export default App
+    const admin = {
+      email: adminEmail,
+      password: '123123',
+      role: 'admin',
+      address: 'Binh Duong',
+      age: '22'
+    };
+
+    const adminDoc = await adminRef.get();
+
+    if (!adminDoc.exists) {
+      try {
+        // Create admin user if not exists
+        await firebase.auth().createUserWithEmailAndPassword(admin.email, admin.password);
+        await adminRef.set({ ...admin });
+      } catch (error) {
+        console.error('Error creating admin: ', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    createAdminUser(); // Check and create admin user on app start
+  }, []);
+
+  return (
+    <UserProvider>
+      <NavigationContainer independent={true}>
+        <Stack.Navigator>
+          {/* Your screen configurations */}
+          <Stack.Screen name="Router" component={Router} />
+          <Stack.Screen name="Home" component={Home} />
+          <Stack.Screen name="SignUp" component={SignUp} />
+          {/* Add more screens as needed */}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </UserProvider>
+  );
+};
+
+export default App;
